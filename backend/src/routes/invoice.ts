@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import Invoice from "../models/Invoice"
 import { protect, AuthRequest } from "../middleware/auth";
 import { upload } from "../config/multer";
+import axios from "axios";
 
 import { extractInvoiceData } from "../services/gemini";
 import path from "path";
@@ -93,7 +94,7 @@ invoiceRouter.post("/upload", protect, upload.single("file"), async (req: AuthRe
     const mimeType = req.file.mimetype;
     const filePath = req.file.path;
     const fileUrl = `/uploads/${req.file.filename}`;
-
+  
     const extracted = await extractInvoiceData(filePath, mimeType);
 
     const invoice = await Invoice.create({
@@ -104,11 +105,72 @@ invoiceRouter.post("/upload", protect, upload.single("file"), async (req: AuthRe
       extractedByAI: true,
       status: "completed",
     });
+      if (mimeType === "application/pdf") {
+      const RAG_URL = process.env.RAG_SERVICE_URL || "http://localhost:8000";
+      const absolutePath = path.resolve(filePath);
+      axios.post(`${RAG_URL}/index`, {
+        invoice_id: invoice._id.toString(),
+        file_path: absolutePath,
+        vendor_name: invoice.vendorName,
+        amount_due: invoice.amountDue,
+        status: invoice.status,
+      }).catch((err) => console.error("RAG indexing failed:", err.message));
+    }
 
     return res.status(201).json(invoice);
   } catch (error) {
     console.error("Upload error:", error);
     return res.status(500).json({ message: "Extraction failed", error: (error as Error).message });
+  }
+});
+
+// GET /api/invoices/export/json
+invoiceRouter.get("/export/json", protect, async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    const invoices = await Invoice.find({ userId: req.userId });
+    const exportData = {
+      exportDate: new Date().toISOString(),  // ISO 8601 format 
+      totalInvoices: invoices.length,
+      invoices,
+    };
+    res.setHeader("Content-Disposition", "attachment; filename=invoices.json");
+    // header -> Content-Disposition means browser ko btana how to show the content 
+    // its 3 values -> "inline" (display content in browser if possible)
+    //              -> "attachment"  (force the browser to download a file)
+                  // -> "attachment:filename" means name of the file 
+    res.setHeader("Content-Type", "application/json"); // telling browser about the data , here data i am sending is json
+    return res.status(200).json(exportData);
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+// GET /api/invoices/export/csv
+invoiceRouter.get("/export/csv", protect, async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    const invoices = await Invoice.find({ userId: req.userId });
+
+    const header = "Invoice Number,Vendor Name,Amount Due,Currency,Invoice Date,Due Date,Status,Items Count,Created At\n";
+    // header means column names of the csv file 
+    // csv file is a row column file 
+    const rows = invoices.map((inv) => [
+      inv.invoiceNumber,
+      inv.vendorName,
+      inv.amountDue,
+      inv.currency,
+      inv.invoiceDate ? new Date(inv.invoiceDate).toISOString().split("T")[0] : "",
+      inv.dueDate ? new Date(inv.dueDate).toISOString().split("T")[0] : "",
+      inv.status,
+      inv.items?.length || 0,
+      new Date(inv.createdAt).toISOString().split("T")[0],
+    ].join(",")).join("\n");
+
+    res.setHeader("Content-Disposition", "attachment; filename=invoices.csv");
+    res.setHeader("Content-Type", "text/csv");
+    return res.status(200).send(header + rows);
+  } catch (error) {
+    return res.status(500).json({ message: "Server error" });
   }
 });
 export default invoiceRouter;

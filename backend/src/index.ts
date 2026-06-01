@@ -9,6 +9,7 @@ import dotenv from "dotenv"
 import { connectDB } from "./db"
 import invoiceRouter from "./routes/invoice"
 import path from "path"
+import chatRouter from "./routes/chat"
 dotenv.config()
 const app = express()
 const PORT =  process.env.PORT || 5000
@@ -35,6 +36,7 @@ app.get("/api/health",(req:Request,res: Response)=>{
 
 app.use("/api/auth",Authrouter)
 app.use("/api/invoices",invoiceRouter)
+app.use("/api/chat",chatRouter)
 app.listen(PORT, () => {
   console.log(`🚀 Invox API running on http://localhost:${PORT}`);
 });
