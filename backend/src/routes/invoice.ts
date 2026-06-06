@@ -15,21 +15,22 @@ invoiceRouter.post("/", protect, async (req: AuthRequest, res: Response): Promis
   try {
     const {
       vendorName, vendorAddress, customerName, customerAddress,
-      invoiceNumber, subtotal, taxAmount, amountDue,
-      currency, invoiceDate, dueDate, items, notes,
+      invoiceNumber, subtotal, taxAmount, taxRate, amountDue,
+      currency, invoiceDate, dueDate, items, notes, status,
     } = req.body;
 
     const invoice = await Invoice.create({
       userId: req.userId,
       vendorName, vendorAddress, customerName, customerAddress,
-      invoiceNumber, subtotal, taxAmount, amountDue,
+      invoiceNumber, subtotal, taxAmount, taxRate, amountDue,
       currency, invoiceDate, dueDate, items, notes,
       extractedByAI: false,
-      status: "pending",
+      status: status || "pending",
     });
 
     return res.status(201).json(invoice);
   } catch (error) {
+    console.log(error)
     return res.status(500).json({ message: "Server error" });
   }
 });
@@ -95,29 +96,32 @@ invoiceRouter.post("/upload", protect, upload.single("file"), async (req: AuthRe
     const filePath = req.file.path;
     const fileUrl = `/uploads/${req.file.filename}`;
   
-    const extracted = await extractInvoiceData(filePath, mimeType);
 
+
+   
+    const extracted = await extractInvoiceData(filePath, mimeType);
+   
     const invoice = await Invoice.create({
       userId: req.userId,
       ...extracted,
       originalFilename: req.file.originalname,
       fileUrl,
       extractedByAI: true,
-      status: "completed",
+      status: "pending", // always pending after AI extraction — needs human review
     });
-      if (mimeType === "application/pdf") {
-      const RAG_URL = process.env.RAG_SERVICE_URL || "http://localhost:8000";
-      const absolutePath = path.resolve(filePath);
-      axios.post(`${RAG_URL}/index`, {
-        invoice_id: invoice._id.toString(),
-        file_path: absolutePath,
-        vendor_name: invoice.vendorName,
-        amount_due: invoice.amountDue,
-        status: invoice.status,
-      }).catch((err) => console.error("RAG indexing failed:", err.message));
-    }
 
-    return res.status(201).json(invoice);
+    // After invoice is saved to MongoDB, index into RAG service (ChromaDB)
+    const RAG_URL = process.env.RAG_SERVICE_URL || "http://localhost:8000";
+    const absolutePath = path.resolve(filePath);
+    axios.post(`${RAG_URL}/index`, {
+      invoice_id: invoice._id.toString(),
+      file_path: absolutePath,
+      vendor_name: invoice.vendorName || "Unknown",
+      amount_due: invoice.amountDue || 0,
+      status: invoice.status,
+    }).catch((err) => console.error("RAG indexing failed:", err.message));
+
+    return res.status(201).json({data:invoice})
   } catch (error) {
     console.error("Upload error:", error);
     return res.status(500).json({ message: "Extraction failed", error: (error as Error).message });

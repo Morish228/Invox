@@ -6,6 +6,7 @@ export interface AuthRequest extends Request {
 } //here Request was an interface and i am making AuthRequest another interface which have all features of Request but it has one extra thing which is userId , if there is a user id it must be a string else ts error while compiling 
 
 export const protect = (req: AuthRequest, res: Response, next: NextFunction): any => {
+ 
   const token = req.headers.authorization?.split(" ")[1];
  console.log(token)
   if (!token) return res.status(401).json({ message: "Not authorized" });

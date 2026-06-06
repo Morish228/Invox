@@ -14,14 +14,15 @@ export interface IInvoice extends Document{
   vendorAddress?: string;
   customerName?: string;
   customerAddress?: string;
-  subtotal?: number;
-  taxAmount?: number;
+  subtotal: number;
+  taxAmount: number;
+  taxRate?: number;
   amountDue: number;
   currency: string;
-  invoiceDate: Date;
+  invoiceDate?: Date;
   dueDate?: Date;
   items: ILineItem[];
-  status: "pending" | "processing" | "completed" | "failed" | "verified" | "paid" | "archived";
+  status: "draft" | "pending" | "approved" | "paid" | "overdue" | "cancelled";
   extractedByAI: boolean;
   fileUrl?: string;
   notes?: string;
@@ -40,36 +41,35 @@ export interface IInvoice extends Document{
 
 const LineItemSchema = new Schema({
   description: { type: String, required: true },
-  quantity: { type: Number, default: 1 },
-  unitPrice: { type: Number, default: 0 },
-  amount: { type: Number, default: 0 },
+  quantity:    { type: Number, default: 1, min: 0 },
+  unitPrice:   { type: Number, default: 0, min: 0 },
+  amount:      { type: Number, default: 0, min: 0 },
 });
 
-
-
-
-const InvoiceSchema: Schema = new Schema({ userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    invoiceNumber: { type: String, default: "" },
+const InvoiceSchema: Schema = new Schema({
+    userId:           { type: Schema.Types.ObjectId, ref: "User", required: true },
+    invoiceNumber:    { type: String, default: "" },
     originalFilename: { type: String },
-    vendorName: { type: String, required: true },
-    vendorAddress: { type: String },
-    customerName: { type: String },
-    customerAddress: { type: String },
-    subtotal: { type: Number },
-    taxAmount: { type: Number },
-    amountDue: { type: Number, required: true },
-    currency: { type: String, default: "USD" },
-    invoiceDate: { type: Date },
-    dueDate: { type: Date },
-    items: { type: [LineItemSchema], default: [] },
+    vendorName:       { type: String, default: "" },
+    vendorAddress:    { type: String, default: "" },
+    customerName:     { type: String, default: "" },
+    customerAddress:  { type: String, default: "" },
+    subtotal:         { type: Number, default: 0, min: 0 },
+    taxAmount:        { type: Number, default: 0, min: 0 },
+    taxRate:          { type: Number, default: 0, min: 0 },
+    amountDue:        { type: Number, default: 0, min: 0 },
+    currency:         { type: String, default: "INR" },
+    invoiceDate:      { type: Date },
+    dueDate:          { type: Date },
+    items:            { type: [LineItemSchema], default: [] },
     status: {
       type: String,
-      enum: ["pending", "processing", "completed", "failed", "verified", "paid", "archived"],
+      enum: ["draft", "pending", "approved", "paid", "overdue", "cancelled"],
       default: "pending",
     },
     extractedByAI: { type: Boolean, default: false },
-    fileUrl: { type: String },
-    notes: { type: String },
+    fileUrl:       { type: String },
+    notes:         { type: String, default: "" },
   },
   { timestamps: true },
 );

@@ -1,6 +1,9 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(__file__))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from invoice_router import router
 
 app = FastAPI(title="Invox RAG Service")
@@ -15,4 +18,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(router)
+app.include_router(router)

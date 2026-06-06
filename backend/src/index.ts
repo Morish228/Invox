@@ -1,3 +1,8 @@
+import dotenv from "dotenv";
+const result = dotenv.config();
+console.log("DOTENV RESULT =", result);
+console.log("CWD =", process.cwd());
+console.log("ENV KEY =", process.env.GEMINI_API_KEY);
 import express, {Request,Response}from "express"
 // In TypeScript, Express provides Request and Response as interfaces/types.
 // req must follow the structure of Express's Request interface
@@ -5,18 +10,21 @@ import express, {Request,Response}from "express"
 import { protect } from "./middleware/auth"
 import Authrouter from "./routes/auth"
 import cors from "cors"
-import dotenv from "dotenv"
+
 import { connectDB } from "./db"
 import invoiceRouter from "./routes/invoice"
 import path from "path"
 import chatRouter from "./routes/chat"
-dotenv.config()
+
 const app = express()
 const PORT =  process.env.PORT || 5000
 app.use(cors())
 app.use(express.json())
 
 connectDB()
+
+console.log(process.env.GEMINI_API_KEY)
+console.log(process.env.PORT)
 
 app.use("/uploads",express.static(path.join(__dirname,"../uploads")));
 // express.static is a middleware 
