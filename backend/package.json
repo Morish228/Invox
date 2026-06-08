@@ -18,8 +18,11 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "googleapis": "^173.0.0",
     "groq-sdk": "^1.2.1",
+    "imap-simple": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
+    "mailparser": "^3.9.9",
     "mongoose": "^9.6.3",
     "multer": "^2.1.1",
     "pdf-parse": "^2.4.5"
@@ -27,7 +30,9 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/imap": "^0.8.43",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/mailparser": "^3.4.6",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
     "@types/pdf-parse": "^1.1.5",
